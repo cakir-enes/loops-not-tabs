@@ -6,6 +6,8 @@
 	let player;
 	let loops = [];
 	let isRecording = false;
+	let isPlaying = false;
+	let isPlayingLoop = false;
 	let loop = { start: null, end: null };
 	let loadYT;
 	let activeLoop;
@@ -20,10 +22,8 @@
 	const pauseVideo = () => player && player.pauseVideo();
 	const currentState = () => player && player.getPlayerState();
 	const currentTime = () => player && player.getCurrentTime();
-	const stopLoop = () => activeLoop && clearInterval(activeLoop);
 
 	function handleLoop() {
-	  console.log(isRecording);
 	  if (isRecording) {
 	    loop.end = currentTime();
 	    loops = [...loops, loop];
@@ -37,16 +37,19 @@
 
 	function startLoop({ start, end }) {
 	  stopLoop();
-	  console.log("Started loop");
+	  isPlayingLoop = true;
 	  activeLoop = setInterval(() => {
 	    let diff = currentTime() - end;
 	    if (diff > 0) {
-	      console.log("Loop back " + diff);
 	      player.seekTo(start);
 	    }
 	  }, 500);
 	}
 
+	function stopLoop() {
+	  isPlayingLoop = false;
+	  clearInterval(activeLoop);
+	}
 
 	onMount(() => {
 	  if (!loadYT) {
@@ -58,46 +61,49 @@
 	      window.onYouTubeIframeAPIReady = () => resolve(window.YT);
 	    });
 	  }
+
 	  loadYT.then(YT => {
 	    player = new YT.Player("player", {
 	      height: 300,
 	      width: 400,
-	      videoId: "M7lc1UVf-VE"
+	      videoId: "M7lc1UVf-VE",
+	      events: {
+	        onStateChange: e => (isPlaying = e.data == YT.PlayerState.PLAYING)
+	      }
 	    });
 	  });
-		
-		  Mousetrap.bind("space", function() {
-	    if ((currentState() == YT.PlayerState.PLAYING)) {
+
+	  Mousetrap.bind("space", function() {
+	    if (currentState() == YT.PlayerState.PLAYING) {
 	      player.pauseVideo();
 	    } else {
 	      player.playVideo();
 	    }
 	    return false;
-		})
-		Mousetrap.bind("r", function() {
-			handleLoop()
-		}) 
+	  });
+	  Mousetrap.bind("r", function() {
+	    handleLoop();
+	  });
+	  Mousetrap.bind("shift+space", stopLoop);
 	});
-	const btnStyle = "f6 link dim br-pill ph3 pv2 mb2 dib white bg-black";
-</script>b
 
-<div>
-		<div style="background-color:red"> 
-			<h1>ASDDSA</h1>	
-		</div>
+	const baseBtn = "white b pv2 ph3 bn br2 ma2";
+	// const baseBtn = "white avenir ba b--black-10  br-50  w3-ns tc h2 h3-ns";
+	const btnStyle = baseBtn;
+	$: loopBtn = `${baseBtn} ${isRecording ? "bg-green" : "bg-dark-blue"}`;
+	$: playBtn = `${baseBtn} ${isPlaying ? "bg-red" : "bg-gray"}`;
+</script>
+
+<h1 class="white bg-near-black avenir lh-solid">Slower</h1>	
+<div class="vh-75 cover bg-center">
+	<div style="height:100%;width:100%" sandbox="allow-scripts allow-same-origin allow-presentation" id='player' />
 </div>
-<!-- <div class="mw5 mw6-ns center pt4" style="background-color:gray"> -->
-  <div class="vh-75 cover bg-center" style="background-color:black">
-		<div style="height:100%;width:100%" sandbox="allow-scripts allow-same-origin allow-presentation" id='player' />
-  </div>
-	<div class="flex items-center justify-center pa4">
-		<button class={btnStyle} on:click={handleLoop}>{isRecording ? "Save A/B" : "STOP A/B"}</button>
-		<button class={btnStyle} on:click={playVideo}>Play</button>
-		<button class={btnStyle} on:click={() => player.seekTo(loop.start)}>{`Go@${loop.start}/${loop.end}`}</button>
-		<button class={btnStyle} on:click={stopLoop}>STOP LOOP</button>
-	</div>
-<!-- </div> -->
-	<Loops loops={loops} startLoop={startLoop} />
-
-<style>
-</style>
+<div class="flex bg-near-white">
+	<button class="{loopBtn}" on:click={handleLoop}>{`R | ${isRecording ? "SAVE LOOP" : "REC LOOP"}`}</button>
+	<button class="{playBtn}" on:click={() => isPlaying ? pauseVideo() : playVideo()}>
+		SPC
+		<ion-icon name="{`${isPlaying ? "pause" : "play"}`}"></ion-icon>
+	</button>
+	<button class="{playBtn}" on:click={stopLoop}>{`SHIFT+SPC | ${isPlayingLoop ? "STOP" : "PLAY"}`}</button>
+</div>
+<Loops loops={loops} startLoop={startLoop} />
