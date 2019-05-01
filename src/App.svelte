@@ -12,6 +12,7 @@
 	let loadYT;
 	let activeLoop;
 	let time;
+	let videoUrl = "";
 	var tag = document.createElement("script");
 	let myConfObj = {
 			iframeMouseOver : false
@@ -50,6 +51,19 @@
 	  isPlayingLoop = false;
 		clearInterval(activeLoop);
 		activeLoop = null
+	}
+
+
+	function loadNewVideo() {
+		loops = []
+		let id = videoUrl.match(re)[1]
+		console.log(id)
+		if (id) {
+			player.loadVideoById(id)
+			videoUrl = ""
+		} else {
+			videoUrl = "Ooops"
+		}
 	}
 
 	onMount(() => {
@@ -110,6 +124,14 @@
 	$: playBtn = `${baseBtn} ${isPlaying ? "bg-red" : "bg-gray"}`;
 
 </script>
+
+
+<div class="ui small center aligned segment">
+	<div class="ui fluid action input">
+			<input type="text" bind:value={videoUrl} placeholder="Paste video url...">
+			<button class="ui button" on:click={loadNewVideo}>Load</button>
+		</div>
+</div>
 
 <div class="flex-wrapper">
 	<div class="video-wrapper">
