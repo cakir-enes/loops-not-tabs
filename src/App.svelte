@@ -12,6 +12,7 @@
 	let loadYT;
 	let activeLoop;
 	let time;
+	let re = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
 	let videoUrl = "";
 	var tag = document.createElement("script");
 	let myConfObj = {
@@ -39,12 +40,13 @@
 	function startLoop({ start, end }) {
 	  stopLoop();
 	  isPlayingLoop = true;
+		player.seekTo(start)
 	  activeLoop = setInterval(() => {
 	    let diff = currentTime() - end;
 	    if (diff > 0) {
 	      player.seekTo(start);
 	    }
-	  }, 500);
+	  }, 450);
 	}
 
 	function stopLoop() {
@@ -57,7 +59,6 @@
 	function loadNewVideo() {
 		loops = []
 		let id = videoUrl.match(re)[1]
-		console.log(id)
 		if (id) {
 			player.loadVideoById(id)
 			videoUrl = ""
@@ -81,14 +82,14 @@
 	    player = new YT.Player("player", {
 	      height: "100%",
 				width: "100%",
-				videoId: "DuxoNKN_55k",
+				videoId: "A8CoUmmOKpI",
+				playerVars: {"rel": 0},
 	      events: {
 	        onStateChange: e => (isPlaying = e.data == YT.PlayerState.PLAYING)
 	      }
 			});
 			window.addEventListener('blur',function(){
 			if(myConfObj.iframeMouseOver){
-				console.log('Wow! Iframe Click!');
 			}
 		});
 
@@ -99,9 +100,6 @@
 				myConfObj.iframeMouseOver = false;
 		});
 		});
-
-
-	
 
 	  Mousetrap.bind("space", function() {
 	    if (currentState() == YT.PlayerState.PLAYING) {
@@ -116,12 +114,6 @@
 	  });
 	  Mousetrap.bind("shift+space", stopLoop);
 	});
-
-	const baseBtn = "white b pv2 ph3 bn br2 ma2";
-	// const baseBtn = "white avenir ba b--black-10  br-50  w3-ns tc h2 h3-ns";
-	const btnStyle = baseBtn;
-	$: loopBtn = `${baseBtn} ${isRecording ? "bg-green" : "bg-dark-blue"}`;
-	$: playBtn = `${baseBtn} ${isPlaying ? "bg-red" : "bg-gray"}`;
 
 </script>
 
@@ -159,15 +151,6 @@
 					R
 				</a>
 		</div>
-
-		<div class="ui labeled right floated button" tabindex="0">
-				<div class={`ui ${activeLoop ? "" : "basic"} black button`} on:click={stopLoop}>
-						<i class="minus icon" /> KILL LOOP
-				</div>
-				<a class="ui basic black left pointing label">
-					<i class="angle up icon" />SPC
-				</a>
-			</div>
 
 			<div class="ui labeled right floated button" tabindex="0">
 					<div class={`ui ${activeLoop ? "" : "basic"} black button`} on:click={stopLoop}>
