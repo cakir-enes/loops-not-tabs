@@ -13,10 +13,10 @@
 	let activeLoop;
 	let time;
 	var tag = document.createElement("script");
+	let myConfObj = {
+			iframeMouseOver : false
+		}
 
-	tag.src = "https://www.youtube.com/iframe_api";
-	var firstScriptTag = document.getElementsByTagName("script")[0];
-	firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 	const playVideo = () => player && player.playVideo();
 	const pauseVideo = () => player && player.pauseVideo();
@@ -48,14 +48,15 @@
 
 	function stopLoop() {
 	  isPlayingLoop = false;
-	  clearInterval(activeLoop);
+		clearInterval(activeLoop);
+		activeLoop = null
 	}
 
 	onMount(() => {
 	  if (!loadYT) {
 	    loadYT = new Promise(resolve => {
 	      const tag = document.createElement("script");
-	      tag.src = "https://www.youtube.com/iframe_api";
+	      tag.src = "https://youtube.com/iframe_api";
 	      const firstScriptTag = document.getElementsByTagName("script")[0];
 	      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 	      window.onYouTubeIframeAPIReady = () => resolve(window.YT);
@@ -64,14 +65,29 @@
 
 	  loadYT.then(YT => {
 	    player = new YT.Player("player", {
-	      height: 300,
-	      width: 400,
-	      videoId: "M7lc1UVf-VE",
+	      height: "100%",
+				width: "100%",
+				videoId: "DuxoNKN_55k",
 	      events: {
 	        onStateChange: e => (isPlaying = e.data == YT.PlayerState.PLAYING)
 	      }
-	    });
-	  });
+			});
+			window.addEventListener('blur',function(){
+			if(myConfObj.iframeMouseOver){
+				console.log('Wow! Iframe Click!');
+			}
+		});
+
+		document.getElementById('player').addEventListener('mouseover',function(){
+			myConfObj.iframeMouseOver = true;
+		});
+		document.getElementById('player').addEventListener('mouseout',function(){
+				myConfObj.iframeMouseOver = false;
+		});
+		});
+
+
+	
 
 	  Mousetrap.bind("space", function() {
 	    if (currentState() == YT.PlayerState.PLAYING) {
@@ -92,18 +108,93 @@
 	const btnStyle = baseBtn;
 	$: loopBtn = `${baseBtn} ${isRecording ? "bg-green" : "bg-dark-blue"}`;
 	$: playBtn = `${baseBtn} ${isPlaying ? "bg-red" : "bg-gray"}`;
+
 </script>
 
-<h1 class="white bg-near-black avenir lh-solid">Slower</h1>	
-<div class="vh-75 cover bg-center">
-	<div style="height:100%;width:100%" sandbox="allow-scripts allow-same-origin allow-presentation" id='player' />
+<div class="flex-wrapper">
+	<div class="video-wrapper">
+		<div class="ratio-keeper">
+			<div class="video-frame mousetrap" sandbox="allow-scripts allow-same-origin allow-presentation" id='player' />
+		</div>
+	</div>
 </div>
-<div class="flex bg-near-white">
-	<button class="{loopBtn}" on:click={handleLoop}>{`R | ${isRecording ? "SAVE LOOP" : "REC LOOP"}`}</button>
-	<button class="{playBtn}" on:click={() => isPlaying ? pauseVideo() : playVideo()}>
-		SPC
-		<ion-icon name="{`${isPlaying ? "pause" : "play"}`}"></ion-icon>
-	</button>
-	<button class="{playBtn}" on:click={stopLoop}>{`SHIFT+SPC | ${isPlayingLoop ? "STOP" : "PLAY"}`}</button>
+
+<div class="ui fluid large buttons">
+		<div class="ui labeled button" tabindex="0">
+				<div class={`ui red ${isPlaying ? "basic" : " "} button`} on:click={() => isPlaying ? pauseVideo() : playVideo()}>
+						<i class={isPlaying ? "pause icon" : "play icon"} />{isPlaying ? "PAUSE" : "PLAY"}
+				</div>
+				<a class="ui basic black left pointing label">
+					SPC
+				</a>
+		</div>
+
+		<div class="ui labeled right floated button" tabindex="0">
+				<div class="{`ui ${isRecording ? "green" : "blue"} basic button`}" on:click={handleLoop}>
+						<i class="{`infinity ${isRecording ? "loading" : ""} icon`}" /> {`${isRecording ? "SAVE LOOP" : "REC LOOP"}`}
+				</div>
+				<a class="ui basic black left pointing label">
+					R
+				</a>
+		</div>
+
+		<div class="ui labeled right floated button" tabindex="0">
+				<div class={`ui ${activeLoop ? "" : "basic"} black button`} on:click={stopLoop}>
+						<i class="minus icon" /> KILL LOOP
+				</div>
+				<a class="ui basic black left pointing label">
+					<i class="angle up icon" />SPC
+				</a>
+			</div>
+
+			<div class="ui labeled right floated button" tabindex="0">
+					<div class={`ui ${activeLoop ? "" : "basic"} black button`} on:click={stopLoop}>
+							<i class="minus icon" /> KILL LOOP
+					</div>
+					<a class="ui basic black left pointing label">
+						<i class="angle up icon" />SPC
+					</a>
+				</div>
 </div>
-<Loops loops={loops} startLoop={startLoop} />
+
+
+<div class="ui segment">
+	{#if loops.length > 0}
+		<Loops loops={loops} startLoop={startLoop} />
+	{:else}
+		<div class="ui center aligned container">RECORD SOME LOOPS</div>
+	{/if}
+</div>
+<style>
+.flex-wrapper {
+    display: flex;
+		justify-content: center;
+    flex-flow: row wrap;
+}
+
+.video-wrapper {
+    min-width: 40%;
+    max-width: 75%;
+    height: 100%;
+    margin:  10px 10px;
+    flex: 1 1 auto;
+}
+
+@media only screen and (max-width: 500px) {
+  .video-wrapper {
+    min-width: 360px;
+  }
+}
+
+.ratio-keeper {
+    position: relative;
+    padding-top: 56.25%;
+}
+
+.video-frame {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+}
+</style>
