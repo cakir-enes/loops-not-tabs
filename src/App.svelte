@@ -12,18 +12,18 @@
 	let loadYT;
 	let activeLoop;
 	let time;
-	let re = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+	let duration;
+	let re = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 	let videoUrl = "";
 	var tag = document.createElement("script");
 	let myConfObj = {
-			iframeMouseOver : false
-		}
-
+	  iframeMouseOver: false
+	};
 
 	const playVideo = () => player && player.playVideo();
 	const pauseVideo = () => player && player.pauseVideo();
 	const currentState = () => player && player.getPlayerState();
-	const currentTime = () => player && player.getCurrentTime();
+	const currentTime = () => (player && player.getCurrentTime()) || 0;
 
 	function handleLoop() {
 	  if (isRecording) {
@@ -40,7 +40,7 @@
 	function startLoop({ start, end }) {
 	  stopLoop();
 	  isPlayingLoop = true;
-		player.seekTo(start)
+	  player.seekTo(start);
 	  activeLoop = setInterval(() => {
 	    let diff = currentTime() - end;
 	    if (diff > 0) {
@@ -51,20 +51,33 @@
 
 	function stopLoop() {
 	  isPlayingLoop = false;
-		clearInterval(activeLoop);
-		activeLoop = null
+	  clearInterval(activeLoop);
+	  activeLoop = null;
 	}
 
+	function rewind(sec) {
+	  let curr = currentTime();
+	  let targetSec = curr - sec >= 0 ? curr - sec : 0;
+	  player.seekTo(targetSec);
+	}
+
+	function forward(sec) {
+	  let curr = currentTime();
+	  let duration = player && player.getDuration();
+	  let targetSec = curr + sec <= duration ? curr + sec : duration;
+	  player.seekTo(targetSec, true);
+	}
 
 	function loadNewVideo() {
-		loops = []
-		let id = videoUrl.match(re)[1]
-		if (id) {
-			player.loadVideoById(id)
-			videoUrl = ""
-		} else {
-			videoUrl = "Ooops"
-		}
+	  loops = [];
+	  let id = videoUrl.match(re)[1];
+	  if (id) {
+	    player.loadVideoById(id);
+	    duration = player.getDuration();
+	    videoUrl = "";
+	  } else {
+	    videoUrl = "Ooops";
+	  }
 	}
 
 	onMount(() => {
@@ -81,26 +94,30 @@
 	  loadYT.then(YT => {
 	    player = new YT.Player("player", {
 	      height: "100%",
-				width: "100%",
-				videoId: "A8CoUmmOKpI",
-				playerVars: {"rel": 0},
+	      width: "100%",
+	      videoId: "A8CoUmmOKpI",
+	      playerVars: { rel: 0 },
 	      events: {
 	        onStateChange: e => (isPlaying = e.data == YT.PlayerState.PLAYING)
 	      }
-			});
-			window.addEventListener('blur',function(){
-			if(myConfObj.iframeMouseOver){
-			}
-		});
+	    });
+	    window.addEventListener("blur", function() {
+	      if (myConfObj.iframeMouseOver) {
+	      }
+	    });
 
-		document.getElementById('player').addEventListener('mouseover',function(){
-			myConfObj.iframeMouseOver = true;
-		});
-		document.getElementById('player').addEventListener('mouseout',function(){
-				myConfObj.iframeMouseOver = false;
-		});
-		});
+	    document.getElementById("player").addEventListener("mouseover", function() {
+	      myConfObj.iframeMouseOver = true;
+	    });
+	    document.getElementById("player").addEventListener("mouseout", function() {
+	      myConfObj.iframeMouseOver = false;
+	    });
+	  });
 
+	  bindShortcuts();
+	});
+
+	function bindShortcuts() {
 	  Mousetrap.bind("space", function() {
 	    if (currentState() == YT.PlayerState.PLAYING) {
 	      player.pauseVideo();
@@ -113,8 +130,9 @@
 	    handleLoop();
 	  });
 	  Mousetrap.bind("shift+space", stopLoop);
-	});
-
+	  Mousetrap.bind("right", () => forward(3));
+	  Mousetrap.bind("left", () => rewind(3));
+	}
 </script>
 
 
@@ -134,14 +152,37 @@
 </div>
 
 <div class="ui fluid large buttons">
-		<div class="ui labeled button" tabindex="0">
-				<div class={`ui red ${isPlaying ? "basic" : " "} button`} on:click={() => isPlaying ? pauseVideo() : playVideo()}>
-						<i class={isPlaying ? "pause icon" : "play icon"} />{isPlaying ? "PAUSE" : "PLAY"}
+
+		<div class="ui flex">
+				<div class="ui labeled button four wide column" tabindex="0">
+					<div class="ui basic black button" on:click={() => rewind(3)}>
+							<i class="undo alternate icon" />
+					</div>
+					<a class="ui basic black left pointing label">
+						<i class="arrow left icon" />
+					</a>
 				</div>
-				<a class="ui basic black left pointing label">
-					SPC
-				</a>
-		</div>
+				
+				<div class="ui labeled button eight wide column" tabindex="0">
+						<div class={`ui red ${isPlaying ? "basic" : " "} button`} on:click={() => isPlaying ? pauseVideo() : playVideo()}>
+								<i class={isPlaying ? "pause icon" : "play icon"} />{isPlaying ? "PAUSE" : "PLAY"}
+						</div>
+						<a class="ui basic black left pointing label">
+							SPC
+						</a>
+				</div>
+
+				<div class="ui labeled button four wide column" tabindex="0">
+					<div class="ui basic black button" on:click={() => forward(3)}>
+							<i class="redo alternate icon" />
+					</div>
+					<a class="ui basic black left pointing label">
+						<i class="arrow right icon" />
+					</a>
+				</div>
+			</div>
+
+	
 
 		<div class="ui labeled right floated button" tabindex="0">
 				<div class="{`ui ${isRecording ? "green" : "blue"} basic button`}" on:click={handleLoop}>
@@ -157,11 +198,10 @@
 							<i class="minus icon" /> KILL LOOP
 					</div>
 					<a class="ui basic black left pointing label">
-						<i class="angle up icon" />SPC
+						<i class="angle down  icon" />SPC
 					</a>
 				</div>
 </div>
-
 
 <div class="ui segment">
 	{#if loops.length > 0}
@@ -170,36 +210,38 @@
 		<div class="ui center aligned container">RECORD SOME LOOPS</div>
 	{/if}
 </div>
+
 <style>
-.flex-wrapper {
-    display: flex;
-		justify-content: center;
-    flex-flow: row wrap;
-}
+    .flex-wrapper {
+      display: flex;
+      justify-content: center;
+      flex-flow: row wrap;
+    }
 
-.video-wrapper {
-    min-width: 40%;
-    max-width: 75%;
-    height: 100%;
-    margin:  10px 10px;
-    flex: 1 1 auto;
-}
+    .video-wrapper {
+      min-width: 40%;
+      max-width: 75%;
+      height: 100%;
+      margin: 10px 10px;
+      flex: 1 1 auto;
+    }
 
-@media only screen and (max-width: 500px) {
-  .video-wrapper {
-    min-width: 360px;
-  }
-}
+    @media only screen and (max-width: 500px) {
+      .video-wrapper {
+        min-width: 360px;
+      }
+    }
 
-.ratio-keeper {
-    position: relative;
-    padding-top: 56.25%;
-}
+    .ratio-keeper {
+      position: relative;
+      padding-top: 56.25%;
+    }
 
-.video-frame {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-}
+    .video-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
 </style>
